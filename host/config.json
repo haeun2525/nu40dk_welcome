@@ -1,0 +1,22 @@
+{
+  "_설명": "도착했을 때 맥이 할 일. message/submessage는 환영 화면 글귀, open은 순서대로 열 목록(app = /Applications 앱 이름, url = 기본 브라우저), voice는 맥이 말할 문장(빈 문자열이면 말 안 함).",
+  "_촬영_팁": "welcome_screen을 false로 하면 앱만 뜬다. 화면 연출 없이 '컴퓨터가 알아서 켜지는' 컷만 찍을 때 쓴다.",
+
+  "port": null,
+
+  "name": "",
+  "message": "환영합니다!",
+  "submessage": "오늘도 잘 부탁해요",
+  "voice": "환영합니다",
+
+  "welcome_screen": true,
+  "screen_seconds": 60,
+  "wake_seconds": 70,
+  "screen_delay_sec": 1.2,
+  "apps_delay_sec": 2.5,
+
+  "open": [
+    { "app": "Microsoft Teams" },
+    { "app": "Notion" }
+  ]
+}

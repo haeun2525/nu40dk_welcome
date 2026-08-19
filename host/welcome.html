@@ -1,0 +1,178 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>welcome</title>
+<!--
+  도착 환영 화면. welcome.py가 크롬 앱 모드(--app)로 전체화면에 띄운다.
+  앱 모드라 탭도 주소창도 없고, 다 끝나면 스스로 닫힌다.
+
+  퇴근 화면(nu40dk_launcher/host/farewell.html)이 컨페티로 터뜨리는 것과 달리
+  여기는 **아래에서 빛이 차오르는** 연출이다. 아침에 문 열고 들어왔을 때
+  컨페티가 터지면 시끄럽다. 맞이하는 쪽은 조용히 밝아져야 한다.
+
+  글귀는 ?msg=&sub=&name= 으로 받는다. 혼자 보려면 파일을 그냥 브라우저로 열면 된다.
+-->
+<style>
+  :root { --bg: #070a12; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  canvas { position: fixed; inset: 0; z-index: 1; display: block; width: 100vw; height: 100vh; }
+
+  .center {
+    position: fixed; inset: 0; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: "Apple SD Gothic Neo", -apple-system, sans-serif;
+    text-align: center; pointer-events: none;
+  }
+
+  /* 시계가 먼저 조용히 떠 있고, 그 다음 인사가 올라온다.
+     한꺼번에 나오면 어디를 봐야 할지 모른다 */
+  .clock {
+    font-size: 1.5vw; font-weight: 500; color: #6c7791;
+    letter-spacing: 0.22em;
+    animation: fade 900ms ease both;
+  }
+  .clock .time { font-size: 2.4vw; color: #aab4cc; display: block; margin-top: 0.6vh; letter-spacing: 0.1em; }
+
+  h1 {
+    margin: 3.2vh 0 0; font-size: 7vw; font-weight: 800; color: #fff;
+    letter-spacing: -0.03em;
+    text-shadow: 0 0 60px rgba(255, 214, 160, 0.45);
+    animation: rise 900ms cubic-bezier(.2,.9,.25,1) 600ms both;
+  }
+  .name {
+    color: #ffd7a3;
+  }
+  p {
+    margin: 2.4vh 0 0; font-size: 2vw; color: #8e99b3;
+    animation: rise 900ms cubic-bezier(.2,.9,.25,1) 900ms both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(30px) scale(.95); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* 마지막에 화면 전체를 어둠으로 덮으며 끝낸다 */
+  #fade {
+    position: fixed; inset: 0; z-index: 3; background: var(--bg);
+    opacity: 0; pointer-events: none; transition: opacity 900ms ease-in;
+  }
+  #fade.on { opacity: 1; }
+</style>
+
+<canvas id="c"></canvas>
+<div class="center">
+  <div class="clock"><span id="date"></span><span class="time" id="time"></span></div>
+  <h1><span id="name" class="name"></span><span id="msg">환영합니다!</span></h1>
+  <p id="sub">오늘도 잘 부탁해요</p>
+</div>
+<div id="fade"></div>
+
+<script>
+  const FADE_MS  = 900;    // 마지막 암전
+
+  const params = new URLSearchParams(location.search);
+
+  // 전체 길이. config.json의 screen_seconds가 정한다 (보드 WELCOME_MS와 맞추면 된다).
+  // 값이 안 오면 예전 기본값으로 돈다
+  const DURATION = Math.max(1500, parseInt(params.get("ms"), 10) || 6500);
+  if (params.get("msg")) document.getElementById("msg").textContent = params.get("msg");
+  if (params.get("sub")) document.getElementById("sub").textContent = params.get("sub");
+
+  // 이름이 있으면 "OOO님, 환영합니다!"가 된다. 없으면 인사만 나온다
+  const who = params.get("name");
+  if (who) document.getElementById("name").textContent = who + "님, ";
+
+  const now = new Date();
+  const days = ["일", "월", "화", "수", "목", "금", "토"];
+  document.getElementById("date").textContent =
+    `${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+  document.getElementById("time").textContent =
+    `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  let W, H, dpr;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width  = innerWidth  * dpr;
+    canvas.height = innerHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = innerWidth; H = innerHeight;
+  }
+  resize();
+  addEventListener("resize", resize);
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  // 위로 떠오르는 빛. 보드 LED가 반짝이는 것과 같은 박자로 올라온다
+  class Mote {
+    constructor(startAnywhere) {
+      this.x = rand(0, W);
+      this.y = startAnywhere ? rand(0, H) : H + rand(10, 120);
+      this.r = rand(1.2, 3.6);
+      this.vy = rand(0.35, 1.5);
+      this.drift = rand(-0.25, 0.25);
+      this.phase = rand(0, Math.PI * 2);
+      this.twinkle = rand(0.02, 0.06);
+      // 따뜻한 색만 쓴다. 차가운 색이 섞이면 '알림'처럼 보이고 환영으로 안 읽힌다
+      this.hue = rand(28, 46);
+    }
+    step() {
+      this.phase += this.twinkle;
+      this.y -= this.vy;
+      this.x += this.drift;
+      if (this.y < -20) { this.y = H + rand(10, 80); this.x = rand(0, W); }
+    }
+    draw() {
+      const a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(this.phase));
+      ctx.fillStyle = `hsla(${this.hue}, 90%, 72%, ${a})`;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const motes = [];
+  for (let i = 0; i < 90; i++) motes.push(new Mote(true));
+
+  const start = performance.now();
+
+  function frame(nowMs) {
+    const t = nowMs - start;
+    ctx.clearRect(0, 0, W, H);
+
+    // 아래에서 차오르는 빛. 처음 2초에 걸쳐 밝아졌다가 은은하게 숨쉰다
+    const grow = Math.min(1, t / 2000);
+    const pulse = 0.85 + 0.15 * Math.sin(t / 700);
+    const glow = ctx.createRadialGradient(
+      W / 2, H * 1.05, 0,
+      W / 2, H * 1.05, H * (0.75 + 0.25 * grow)
+    );
+    glow.addColorStop(0,    `rgba(255, 186, 110, ${0.42 * grow * pulse})`);
+    glow.addColorStop(0.45, `rgba(255, 138, 90, ${0.16 * grow})`);
+    glow.addColorStop(1,    "rgba(255, 120, 80, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    for (const m of motes) { m.step(); m.draw(); }
+
+    if (t < DURATION) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  setTimeout(() => document.getElementById("fade").classList.add("on"),
+             DURATION - FADE_MS);
+
+  // 앱 모드 창은 스스로 닫을 수 있다. 출근했는데 창이 남아 있으면 앞뒤가 안 맞는다
+  setTimeout(() => window.close(), DURATION + 250);
+
+  // 촬영 중 마음이 바뀌면 즉시 끌 수 있어야 한다
+  addEventListener("keydown", (e) => { if (e.key === "Escape") window.close(); });
+  addEventListener("click", () => window.close());
+</script>

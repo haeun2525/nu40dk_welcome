@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Xcode — 사용자별 상태라 공유하면 충돌만 난다
+xcuserdata/
+*.xcuserstate
+build/
+DerivedData/
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+
+# 개인 설정. config.json은 이름·앱 목록이 들어가므로 예시만 올린다
+host/config.local.json

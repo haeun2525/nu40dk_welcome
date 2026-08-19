@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>welcome</string>
+
+	<!-- 에셋 카탈로그의 아이콘 이름. **없으면 알림 배너와 설정에서 아이콘이 빈칸이 된다.**
+	     홈 화면은 옛 방식(CFBundleIconFiles)으로도 찾아내기 때문에 멀쩡해 보여서
+	     원인을 엉뚱한 데서 찾게 된다. Info.plist를 직접 쓰는 프로젝트에서는
+	     이 키가 자동으로 안 들어온다 -->
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+
+	<!-- 이게 없으면 앱은 위치 권한을 '앱 사용 중'까지밖에 못 올린다.
+	     '항상'이 아니면 앱이 꺼진 상태에서 비콘 리전에 들어가도 깨어나지 않는다 —
+	     이 프로젝트의 존재 이유가 사라진다 -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>회사 책상의 보드에 가까워지면 맞이해주기 위해, 앱이 꺼져 있을 때도 보드 신호를 확인합니다.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>회사 책상의 보드에 가까워졌는지 확인합니다.</string>
+
+	<!-- 없으면 블루투스를 켜는 즉시 앱이 죽는다 -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>도착했다는 사실을 보드에 알려주기 위해 블루투스를 사용합니다.</string>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<!-- 리전 진입으로 깨어난 뒤 보드에 연결해 도착을 알리려면 필요하다 -->
+		<string>bluetooth-central</string>
+		<string>location</string>
+	</array>
+
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.nucode.NU40DKWelcome</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nuwelcome</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
